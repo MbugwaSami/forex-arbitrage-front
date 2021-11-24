@@ -5,18 +5,32 @@ import ArbitageTable from "./table";
 import { getData } from "../../axios";
 import "./arbitage.css";
 
+export interface Path {
+  srcCurr: string;
+  destCurr: string;
+  arbitrage: number;
+  rate: number;
+}
+
 export interface ArbitagePath {
-  maxPath: string;
-  pathArray: Array<PathValue>;
+  arbitrage: string;
+  path: Array<Path>;
 }
 
 export interface CurrencyResponse {
-  currencies: Array<SelectOption>;
+  currencies?: Array<SelectOption>;
+  error?: string;
 }
 
-export interface PathValue {
-  currency: string;
-  rate: string;
+export interface ArbitageResponse {
+  arbitages?: Array<ArbitagePath>;
+  max: ArbitagePath;
+  error?: string;
+}
+
+export interface Arbitrage {
+  arbitrage: number;
+  path: Array<Path>;
 }
 
 export interface SelectOption {
@@ -25,7 +39,7 @@ export interface SelectOption {
 }
 
 const Arbitage = () => {
-  const [tableData, setTableData] = useState<Array<PathValue>>();
+  const [tableData, setTableData] = useState<Array<Path>>();
   const [currencyList, setCurrencyList] = useState<Array<SelectOption>>();
   const [selectedCurrency, setSelectedCurrency] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -44,10 +58,16 @@ const Arbitage = () => {
       setError("Base Currency is required");
     } else {
       setIsLoading(true);
-      const data = await getData<ArbitagePath>("/arbitage", { base: "usd" });
+      const data = await getData<ArbitageResponse>("/arbitage", {
+        base: selectedCurrency,
+      });
       if (data) {
-        setTableData(data?.pathArray);
         setIsLoading(false);
+        if (data?.error) {
+          setError(data?.error);
+        } else {
+          setTableData(data?.max.path);
+        }
       }
     }
   };
@@ -65,7 +85,7 @@ const Arbitage = () => {
       <div className=" border-3 border  w-50 p-3 m-3 text-center">
         <h6 className="">Arbitage Path</h6>
         {tableData?.length ? (
-          <ArbitageTable />
+          <ArbitageTable data={tableData} />
         ) : (
           <div className="h-100 d-flex justify-content-center align-items-center">
             <p>Select Base Currency To View</p>
@@ -73,17 +93,21 @@ const Arbitage = () => {
         )}
       </div>
       <div className="border-3 border p-3 w-25 m-3">
-        <h6 className="">Arbitage Calculator</h6>
+        <h6 className="">Arbitrage Calculator</h6>
         <Form>
           <Form.Group className="mb-3" controlId="formBasicEmail">
             <Form.Label>Select Base Currency</Form.Label>
             <Form.Select
               onChange={handleChange}
-              aria-label="Default select example"
+              aria-label="Select Base Currency<"
             >
               <option value="">Select base</option>
-              {currencyList?.map((current) => {
-                return <option value={current.value}>{current.label}</option>;
+              {currencyList?.map((current, index) => {
+                return (
+                  <option key={index} value={current.value}>
+                    {current.label}
+                  </option>
+                );
               })}
             </Form.Select>
             {error && <Form.Text className="text-danger">{error}</Form.Text>}
